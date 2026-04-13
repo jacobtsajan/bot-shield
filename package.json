@@ -1,0 +1,28 @@
+{
+  "name": "bot-shield",
+  "version": "1.0.1",
+  "description": "An Economic Deterrence Bot Mitigation Middleware for Express",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "bot-protection",
+    "middleware",
+    "express",
+    "security",
+    "bot-shield",
+    "rate-limiting",
+    "economic-deterrence"
+  ],
+  "author": {
+    "name": "Jacob T Sajan",
+    "email": "jacobtsajan1@gmail.com",
+    "url": "https://github.com/jacobtsajan"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jacob/bot-shield"
+  },
+  "license": "ISC"
+}
