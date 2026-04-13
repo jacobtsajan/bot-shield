@@ -7,14 +7,14 @@ This package protects your valuable API endpoints by filtering out automated scr
 ## Installation
 
 ```bash
-npm install bot-shield-mca
+npm install bot-shield
 ```
 
 ## Basic Usage
 
 ```javascript
 const express = require('express');
-const BotShield = require('bot-shield-mca');
+const BotShield = require('bot-shield');
 
 const app = express();
 const botShield = new BotShield({
