@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'BotShield DevOps Architecture: EC2, IAM, CloudWatch Telemetry, and SNS Notifications'
+
+Resources:
+  # 1. THE VIRTUAL PRIVATE SERVER
+  BotShieldEC2Instance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      InstanceType: "t3.micro"
+      ImageId: "ami-05d2d839d4f73aafb" # Ubuntu 22.04 LTS
+      PrivateIpAddress: "172.31.44.59"
+      SecurityGroupIds:
+        - !Ref BotShieldSecurityGroup
+      Tags:
+        - Key: "Name"
+          Value: "mainpro_eval"
+      IamInstanceProfile: !Ref IAMInstanceProfileEC2cloudwatchrole
+
+  # 2. THE FIREWALL (SECURITY GROUP)
+  BotShieldSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "BotShield Inbound Port Rules"
+      VpcId: "vpc-0c6b04356adb85304"
+      SecurityGroupIngress:
+        - CidrIp: "0.0.0.0/0"
+          IpProtocol: "tcp"
+          FromPort: 22
+          ToPort: 22
+          Description: "Admin Console (SSH)"
+        - CidrIp: "0.0.0.0/0"
+          IpProtocol: "tcp"
+          FromPort: 3000
+          ToPort: 3000
+          Description: "Shielded Environment"
+        - CidrIp: "0.0.0.0/0"
+          IpProtocol: "tcp"
+          FromPort: 3001
+          ToPort: 3001
+          Description: "Vulnerable Baseline Environment"
+
+  # 3. CLOUDWATCH METRIC FILTER (THE THREAT SCANNER)
+  LogsMetricFilterThreatScan:
+    Type: "AWS::Logs::MetricFilter"
+    Properties:
+      LogGroupName: "BotShield/Protected-Server"
+      FilterPattern: "\"THREAT\""
+      FilterName: "BlockedBots"
+      MetricTransformations:
+        - MetricNamespace: "BotShield"
+          MetricName: "BlockedBots"
+          MetricValue: "1"
+
+  # 4. CLOUDWATCH ALARM (THE TRIGGER)
+  CloudWatchAlarmBotIntrusion:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "BOT INTRUSION DETECTED"
+      Namespace: "BotShield"
+      MetricName: "BlockedBots"
+      Statistic: "Sum"
+      ComparisonOperator: "GreaterThanOrEqualToThreshold"
+      Threshold: 1
+      Period: 60
+      EvaluationPeriods: 1
+      TreatMissingData: "missing"
+      AlarmActions:
+        - !Ref SNSTopicAdminAlerts
+
+  # 5. AMAZON SNS TOPIC (THE MOBILE NOTIFICATION PIPELINE)
+  SNSTopicAdminAlerts:
+    Type: "AWS::SNS::Topic"
+    Properties:
+      TopicName: "Default_CloudWatch_Alarms_Topic"
+      Subscription:
+        - Endpoint: "jacobtsajan@gmail.com"
+          Protocol: "email"
+        - Endpoint: "jacobtsajan1@gmail.com"
+          Protocol: "email"
+
+  # 6. IAM ROLE PERMISSIONS
+  IAMRoleEC2cloudwatchrole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: "EC2-cloudwatchrole"
+      Description: "Allows EC2 instances to stream daemon logs to AWS CloudWatch."
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action: "sts:AssumeRole"
+            Principal:
+              Service: "ec2.amazonaws.com"
+
+  IAMInstanceProfileEC2cloudwatchrole:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      InstanceProfileName: "EC2-cloudwatchrole"
+      Roles:
+        - "EC2-cloudwatchrole"
