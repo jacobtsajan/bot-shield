@@ -7,12 +7,15 @@ on:
 
 permissions:
   id-token: write
+  contents: write
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -21,6 +24,11 @@ jobs:
 
       - run: npm install
 
-      - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Bump version
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          npm version patch -m "chore: bump version to %s [skip ci]"
+          git push
+
+      - run: npx -y npm@latest publish --provenance --access public
