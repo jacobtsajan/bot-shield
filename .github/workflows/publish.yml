@@ -6,12 +6,14 @@ on:
       - main
 
 permissions:
-  id-token: write
-  contents: write
+  id-token: write    # Required for OIDC token generation
+  contents: write    # Required for pushing version bump commit
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Prevent infinite loops from version bump commits
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -20,15 +22,29 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          registry-url: 'https://registry.npmjs.org'
+          # NOTE: Do NOT set registry-url here — it conflicts with OIDC
+          #       Setting registry-url causes setup-node to write an .npmrc
+          #       that expects NODE_AUTH_TOKEN, which breaks Trusted Publishing.
 
-      - run: npm install
+      - name: Upgrade npm to latest (OIDC requires >= v11.5.1)
+        run: |
+          npm install -g npm@latest
+          echo "npm version: $(npm --version)"
+          echo "node version: $(node --version)"
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Bump version
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          npm version patch -m "chore: bump version to %s [skip ci]"
-          git push
+        run: npm version patch -m "chore(release): bump to %s [skip ci]"
 
-      - run: npx -y npm@latest publish --provenance --access public
+      - name: Publish to npm (via OIDC Trusted Publishing)
+        run: npm publish --provenance --access public
+
+      - name: Push version bump back to repo
+        run: git push --follow-tags
