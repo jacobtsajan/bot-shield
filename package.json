@@ -1,6 +1,6 @@
 {
   "name": "bot-shield",
-  "version": "1.0.3",
+  "version": "1.0.6",
   "description": "An Economic Deterrence Bot Mitigation Middleware for Express",
   "main": "index.js",
   "scripts": {
@@ -22,7 +22,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jacob/bot-shield"
+    "url": "git+https://github.com/jacobtsajan/bot-shield.git"
   },
+  "homepage": "https://github.com/jacobtsajan/bot-shield#readme",
   "license": "ISC"
 }
