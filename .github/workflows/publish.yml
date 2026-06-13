@@ -6,13 +6,12 @@ on:
       - main
 
 permissions:
-  id-token: write    # Required for OIDC token generation
-  contents: write    # Required for pushing version bump commit
+  id-token: write
+  contents: write
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    # Prevent infinite loops from version bump commits
     if: "!contains(github.event.head_commit.message, '[skip ci]')"
     steps:
       - uses: actions/checkout@v4
@@ -22,15 +21,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          # NOTE: Do NOT set registry-url here — it conflicts with OIDC
-          #       Setting registry-url causes setup-node to write an .npmrc
-          #       that expects NODE_AUTH_TOKEN, which breaks Trusted Publishing.
 
-      - name: Upgrade npm to latest (OIDC requires >= v11.5.1)
+      - name: Upgrade npm to latest
         run: |
           npm install -g npm@latest
-          echo "npm version: $(npm --version)"
-          echo "node version: $(node --version)"
+          npm --version
 
       - name: Install dependencies
         run: npm ci --ignore-scripts
@@ -41,10 +36,15 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Bump version
-        run: npm version patch -m "chore(release): bump to %s [skip ci]"
+        run: |
+          npm version patch --no-git-tag-version
+          VERSION=$(node -p "require('./package.json').version")
+          git add package.json package-lock.json
+          git commit -m "chore(release): bump to v${VERSION} [skip ci]"
+          git tag "v${VERSION}"
 
-      - name: Publish to npm (via OIDC Trusted Publishing)
+      - name: Publish to npm
         run: npm publish --provenance --access public
 
-      - name: Push version bump back to repo
+      - name: Push version bump
         run: git push --follow-tags
